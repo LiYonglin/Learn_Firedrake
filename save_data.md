@@ -4,7 +4,7 @@ from scipy import io
 V = uh.ufl_function_space()
 p = mesh.coordinates.dat.data.real
 t = V.cell_node_list
-io.savemat('data2mat/mesh_pt.mat',{'p': p, 't': t})
+io.savemat('mesh_pt.mat',{'p': p, 't': t})
 ```
 
 ### Print vector and matrix to dat file
