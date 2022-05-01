@@ -16,7 +16,7 @@ viewer.flush()
 
 """
 Get data in MATLAB:
-    fd = PetscOpenFile('data_(Dim)D.dat');
+    fd = PetscOpenFile('data.dat');
     A = PetscBinaryRead(fd, 'complex', 1, 'indices', 'int64');
     b = PetscBinaryRead(fd, 'complex', 1, 'indices', 'int64');
 """
