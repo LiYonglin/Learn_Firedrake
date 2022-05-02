@@ -22,7 +22,7 @@ Get data in MATLAB:
 """
 ```
 
-### Print matlab mesh (p and t) to mesh file
+### Print matlab mesh (p and t) to msh file
 ```
 function print_to_msh(p,t,meshname)
 
