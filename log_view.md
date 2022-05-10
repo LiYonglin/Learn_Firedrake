@@ -23,3 +23,11 @@ python file.py -ksp_view -dm_view -log_view :log_file.txt:ascii_flamegraph
 The log_file.txt can be graphed on https://www.speedscope.app/
 
 See https://www.firedrakeproject.org/optimising.html for more details.
+
+
+### Trace and info
+You can execute programs by
+```
+mpiexec -n 36 file.py -info info_file_name -log_trace trace_file_name
+```
+See more on https://petsc.org/main/docs/manualpages/Profiling/PetscLogView.html and https://petsc.org/release/docs/manual/profiling/
