@@ -30,4 +30,9 @@ You can execute programs by
 ```
 mpiexec -n 36 file.py -info info_file_name -log_trace trace_file_name
 ```
+Then you can watch the info or trace files by
+```
+tail -f info_file_name.*
+tail -f trace_file_name.*
+```
 See more on https://petsc.org/main/docs/manualpages/Profiling/PetscLogView.html and https://petsc.org/release/docs/manual/profiling/
