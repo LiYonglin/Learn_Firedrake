@@ -35,18 +35,6 @@ def rhsg(x):
     u = exactu(x)
     return u
 
-n = PETSc.Options().getInt('-n', default=10)
-mesh = UnitSquareMesh(nx=n, ny=n)
-x = SpatialCoordinate(mesh)
-V = FunctionSpace(mesh, 'CG', degree=1)
-bc = DirichletBC(V, rhsg(x), 'on_boundary')
-
-u = TrialFunction(V)
-v = TestFunction(V)
-
-a = inner(grad(u),grad(v))*dx + inner(u,v)*dx
-f = inner(rhsf(x),v)*dx
-
 def solve_Dirichlet_v1(V, bc, a, f):
     uh = Function(V)
     solve(a==f, uh, bcs=bc, \
@@ -181,5 +169,18 @@ def solve_Dirichlet_v3(V, bc, a, f):
     printf(np.real(err/unorm))
 
 if __name__ == '__main__':
+    # A simple test
+    n = PETSc.Options().getInt('-n', default=10)
+    mesh = UnitSquareMesh(nx=n, ny=n)
+    x = SpatialCoordinate(mesh)
+    V = FunctionSpace(mesh, 'CG', degree=1)
+    bc = DirichletBC(V, rhsg(x), 'on_boundary')
+
+    u = TrialFunction(V)
+    v = TestFunction(V)
+
+    a = inner(grad(u),grad(v))*dx + inner(u,v)*dx
+    f = inner(rhsf(x),v)*dx
+
     solve_Dirichlet_v2(V, bc, a, f)
     solve_Dirichlet_v3(V, bc, a, f)
