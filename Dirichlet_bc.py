@@ -35,6 +35,86 @@ def rhsg(x):
     u = exactu(x)
     return u
 
+
+def add_DirichletBC(V, bc, a_mat, f_vec, ToSolve=False):
+    """
+    Add Dirichlet data (bc) to variational formulation a==f.
+    Return: The solution is given by u=D*(inv(A)*b)+ud
+        result.A: stiffness matrix
+        result.b: RHS vector
+        result.D: permutation matrix
+        result.ud: Dirichlet value
+        result.others
+    """
+
+    # Ku=f
+    a_mat_size = a_mat.getSizes()
+    rlgmap, clgmap = a_mat.getLGMap()
+    a_bsize = a_mat.getBlockSize()
+
+    # Find boundary nodes 
+    last_index = bc.function_space().node_set.size
+    _is_bc_nodes = bc.nodes < last_index
+    bc_nodes = bc.nodes[_is_bc_nodes] # remove the ghost nodes
+    len_bc_nodes = len(bc_nodes)
+
+    # Create permutation matrix D: u=D*un+ud
+    ncol_Local = a_mat_size[1][0]-len_bc_nodes*a_bsize
+    nrow_Local = a_mat_size[0][0]
+    D = PETSc.Mat().createAIJ((a_mat_size[0], (ncol_Local,None)), bsize=a_bsize)
+    D.setUp()
+    # Create the mapping from local to global for D
+    _clgmap = PETSc.LGMap()
+    owned_sz = np.array(ncol_Local//a_bsize, dtype=IntType)
+    offset = np.empty_like(owned_sz)
+    COMM_WORLD.Scan(owned_sz, offset)
+    offset -= owned_sz
+    indices = np.arange(offset, offset + owned_sz, dtype=IntType)
+    _clgmap.create(indices, bsize=a_bsize, comm=COMM_WORLD)
+    D.setLGMap(rlgmap, _clgmap)
+    # Set D the identity matrix whose columns on boundary are removed
+    not_bc_nodes = np.setdiff1d(np.arange(nrow_Local//a_bsize), bc_nodes)
+    for i1 in range(ncol_Local//a_bsize):
+        for i2 in range(a_bsize):
+            D.setValueLocal(not_bc_nodes[i1]*a_bsize+i2, i1*a_bsize+i2, 1)
+    D.assemble()
+
+    # A = D'*K*D
+    DTA = D.transposeMatMult(a_mat)
+    A = DTA.matMult(D)
+    A.setLGMap(_clgmap, _clgmap)
+
+    # The values of solution on Dirichlet boundary
+    b_fc = Function(V)
+    bc.apply(b_fc)
+    # Set the RHS vector b = D'*(f-K*ud) 
+    b, _mid = D.createVecs() # _mid = D*b
+    with b_fc.dat.vec_ro as ud:
+        a_mat.mult(ud, _mid)
+        _mid.aypx(-1, f_vec) # _mid=f-a*ud
+        D.multTranspose(_mid, b) 
+
+    # Solve the solution: u = D*(A\b)+ud
+    if ToSolve:
+        # KSP solver
+        ksp = PETSc.KSP().create()
+        ksp.setOperators(A)
+        om = OptionsManager({'ksp_type': 'preonly', 'pc_type': 'lu'}, \
+            options_prefix='solve_Dirichlet')
+        om.set_from_options(ksp)
+        uh = Function(V)
+        un_vec = D.createVecRight() 
+        with om.inserted_options():
+            ksp.solve(b, un_vec)
+        with uh.dat.vec as u_vec, b_fc.dat.vec_ro as ud:
+            D.multAdd(un_vec, ud, u_vec)
+    else:
+        uh = None
+
+    linear_system = {'A':A, 'b':b, 'D':D, 'ud':ud, 'uh':uh}
+    return linear_system
+
+# The following is for testing
 def solve_Dirichlet_v1(V, bc, a, f):
     uh = Function(V)
     solve(a==f, uh, bcs=bc, \
